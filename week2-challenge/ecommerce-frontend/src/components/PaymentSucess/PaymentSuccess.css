@@ -1,0 +1,85 @@
+.payment-result-bg {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-result-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  padding: 40px 32px 32px 32px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  animation: fadeIn 0.7s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(40px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.icon-circle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px auto;
+  font-size: 2.5em;
+}
+
+.icon-circle.success {
+  background: #e6fffa;
+  color: #38a169;
+  border: 2px solid #38a169;
+}
+
+.icon-circle.failure {
+  background: #fff5f5;
+  color: #e53e3e;
+  border: 2px solid #e53e3e;
+}
+
+.checkmark {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.crossmark {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.payment-result-card h2 {
+  margin-bottom: 12px;
+  color: #2d3748;
+  font-weight: 700;
+}
+
+.payment-result-card p {
+  color: #4a5568;
+  font-size: 1.1em;
+  margin-bottom: 28px;
+}
+
+.result-btn {
+  background: linear-gradient(90deg, #3182ce 0%, #2563eb 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 600;
+  padding: 12px 32px;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: 0 2px 8px rgba(49,130,206,0.08);
+}
+
+.result-btn:hover {
+  background: linear-gradient(90deg, #2563eb 0%, #3182ce 100%);
+}

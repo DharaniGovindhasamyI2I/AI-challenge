@@ -1,0 +1,1 @@
+export const sendWelcomeEmail = jest.fn().mockResolvedValue({ messageId: '12345' }); 
