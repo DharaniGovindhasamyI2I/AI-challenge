@@ -39,7 +39,7 @@ public class SqlTestcontainersTestDatabase : ITestDatabase
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlServer(_connectionString)
-            .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
+            // .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
         var context = new ApplicationDbContext(options);

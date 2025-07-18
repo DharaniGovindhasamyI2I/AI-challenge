@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SignalR Test Page</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; }
+        .button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .status { padding: 5px 10px; border-radius: 3px; margin: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SignalR Real-time Test Page</h1>
+        
+        <div class="section">
+            <h2>Connection Status</h2>
+            <div id="connectionStatus" class="status disconnected">Disconnected</div>
+            <button class="button" onclick="connect()">Connect</button>
+            <button class="button" onclick="disconnect()">Disconnect</button>
+        </div>
+
+        <div class="section">
+            <h2>Join Groups</h2>
+            <button class="button" onclick="joinOrderGroup('1')">Join Order Group 1</button>
+            <button class="button" onclick="joinCustomerGroup('1')">Join Customer Group 1</button>
+            <button class="button" onclick="joinAdminGroup()">Join Admin Group</button>
+            <button class="button" onclick="joinProductGroup('1')">Join Product Group 1</button>
+            <button class="button" onclick="joinLowStockGroup()">Join Low Stock Alerts</button>
+        </div>
+
+        <div class="section">
+            <h2>Test Notifications</h2>
+            <button class="button" onclick="testOrderCreated()">Test Order Created</button>
+            <button class="button" onclick="testOrderStatusChanged()">Test Order Status Changed</button>
+            <button class="button" onclick="testPaymentProcessed()">Test Payment Processed</button>
+            <button class="button" onclick="testInventoryUpdated()">Test Inventory Updated</button>
+            <button class="button" onclick="testLowStockAlert()">Test Low Stock Alert</button>
+        </div>
+
+        <div class="section">
+            <h2>Event Log</h2>
+            <div id="log" class="log"></div>
+            <button class="button" onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        let orderHub = null;
+        let inventoryHub = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = connected ? 'Connected' : 'Disconnected';
+            statusDiv.className = 'status ' + (connected ? 'connected' : 'disconnected');
+        }
+
+        async function connect() {
+            try {
+                // Connect to Order Hub
+                orderHub = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/orders')
+                    .build();
+
+                orderHub.on('OrderCreated', (order) => {
+                    log(`Order Created: ${order.orderNumber} - Customer: ${order.customerId} - Amount: $${order.totalAmount}`);
+                });
+
+                orderHub.on('OrderStatusChanged', (change) => {
+                    log(`Order Status Changed: ${change.orderNumber} - ${change.previousStatus} → ${change.newStatus}`);
+                });
+
+                orderHub.on('PaymentProcessed', (payment) => {
+                    log(`Payment Processed: ${payment.orderNumber} - Status: ${payment.paymentStatus} - Amount: $${payment.amount}`);
+                });
+
+                orderHub.on('NewOrderReceived', (order) => {
+                    log(`New Order Received (Admin): ${order.orderNumber} - Customer: ${order.customerId}`);
+                });
+
+                orderHub.on('LowStockAlert', (alert) => {
+                    log(`Low Stock Alert: ${alert.productName} (ID: ${alert.productId}) - Quantity: ${alert.currentQuantity}`);
+                });
+
+                await orderHub.start();
+                log('Connected to Order Hub');
+
+                // Connect to Inventory Hub
+                inventoryHub = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/inventory')
+                    .build();
+
+                inventoryHub.on('InventoryUpdated', (update) => {
+                    log(`Inventory Updated: Product ${update.productId} - ${update.oldQuantity} → ${update.newQuantity} (Change: ${update.change})`);
+                });
+
+                inventoryHub.on('LowStockAlert', (alert) => {
+                    log(`Low Stock Alert (Inventory): ${alert.productName} - Quantity: ${alert.currentQuantity}`);
+                });
+
+                await inventoryHub.start();
+                log('Connected to Inventory Hub');
+
+                updateConnectionStatus(true);
+            } catch (err) {
+                log(`Connection Error: ${err}`);
+                updateConnectionStatus(false);
+            }
+        }
+
+        async function disconnect() {
+            if (orderHub) {
+                await orderHub.stop();
+                log('Disconnected from Order Hub');
+            }
+            if (inventoryHub) {
+                await inventoryHub.stop();
+                log('Disconnected from Inventory Hub');
+            }
+            updateConnectionStatus(false);
+        }
+
+        async function joinOrderGroup(orderId) {
+            if (orderHub) {
+                await orderHub.invoke('JoinOrderGroup', orderId);
+                log(`Joined Order Group: ${orderId}`);
+            }
+        }
+
+        async function joinCustomerGroup(customerId) {
+            if (orderHub) {
+                await orderHub.invoke('JoinCustomerGroup', customerId);
+                log(`Joined Customer Group: ${customerId}`);
+            }
+        }
+
+        async function joinAdminGroup() {
+            if (orderHub) {
+                await orderHub.invoke('JoinAdminGroup');
+                log('Joined Admin Group');
+            }
+        }
+
+        async function joinProductGroup(productId) {
+            if (inventoryHub) {
+                await inventoryHub.invoke('JoinProductGroup', productId);
+                log(`Joined Product Group: ${productId}`);
+            }
+        }
+
+        async function joinLowStockGroup() {
+            if (inventoryHub) {
+                await inventoryHub.invoke('JoinLowStockGroup');
+                log('Joined Low Stock Alerts Group');
+            }
+        }
+
+        async function testOrderCreated() {
+            await fetch('/api/SignalRTest/order-created', { method: 'POST' });
+            log('Order Created test notification sent');
+        }
+
+        async function testOrderStatusChanged() {
+            await fetch('/api/SignalRTest/order-status-changed', { method: 'POST' });
+            log('Order Status Changed test notification sent');
+        }
+
+        async function testPaymentProcessed() {
+            await fetch('/api/SignalRTest/payment-processed', { method: 'POST' });
+            log('Payment Processed test notification sent');
+        }
+
+        async function testInventoryUpdated() {
+            await fetch('/api/SignalRTest/inventory-updated?productId=1&newQuantity=50&oldQuantity=100', { method: 'POST' });
+            log('Inventory Updated test notification sent');
+        }
+
+        async function testLowStockAlert() {
+            await fetch('/api/SignalRTest/low-stock-alert?productId=1&productName=TestProduct&quantity=5', { method: 'POST' });
+            log('Low Stock Alert test notification sent');
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html> 

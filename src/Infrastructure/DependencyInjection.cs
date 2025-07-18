@@ -3,6 +3,9 @@ using CleanArchitecture.Domain.Constants;
 using CleanArchitecture.Infrastructure.Data;
 using CleanArchitecture.Infrastructure.Data.Interceptors;
 using CleanArchitecture.Infrastructure.Identity;
+using CleanArchitecture.Infrastructure.Orders;
+using CleanArchitecture.Infrastructure.Payments;
+using CleanArchitecture.Infrastructure.Caching;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -24,13 +27,7 @@ public static class DependencyInjection
         builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-#if (UsePostgreSQL)
-            options.UseNpgsql(connectionString).AddAsyncSeeding(sp);
-#elif (UseSqlite)
-            options.UseSqlite(connectionString).AddAsyncSeeding(sp);
-#else
-            options.UseSqlServer(connectionString).AddAsyncSeeding(sp);
-#endif
+            options.UseNpgsql(connectionString);
         });
 
 #if (UseAspire)
@@ -65,6 +62,26 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<IOrderService, OrderService>();
+        
+        // Configure Redis caching
+        var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrEmpty(redisConnectionString))
+        {
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnectionString;
+                options.InstanceName = "CleanArchitecture_";
+            });
+        }
+        else
+        {
+            // Fallback to in-memory cache if Redis is not available
+            builder.Services.AddDistributedMemoryCache();
+        }
+        
+        builder.Services.AddScoped<ICacheService, RedisCacheService>();
 
         builder.Services.AddAuthorization(options =>
             options.AddPolicy(Policies.CanPurge, policy => policy.RequireRole(Roles.Administrator)));

@@ -11,8 +11,7 @@ var postgres = builder
 var database = postgres.AddDatabase(databaseName);
 
 builder.AddProject<Projects.Web>("web")
-    .WithReference(database)
-    .WaitFor(database);
+    .WithReference(database);
 #elif (UseSqlite)
 builder.AddProject<Projects.Web>("web");
 #else
@@ -21,8 +20,7 @@ var sql = builder.AddSqlServer("sql");
 var database = sql.AddDatabase("CleanArchitectureDb");
 
 builder.AddProject<Projects.Web>("web")
-    .WithReference(database)
-    .WaitFor(database);
+    .WithReference(database);
 #endif
 
 builder.Build().Run();

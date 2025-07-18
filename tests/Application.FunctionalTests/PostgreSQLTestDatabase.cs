@@ -34,7 +34,7 @@ public class PostgreSQLTestDatabase : ITestDatabase
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseNpgsql(_connectionString)
-            .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
+            // .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
         var context = new ApplicationDbContext(options);

@@ -1,32 +1,51 @@
 using CleanArchitecture.Infrastructure.Data;
+using CleanArchitecture.Web.Services;
+using CleanArchitecture.Web.Infrastructure;
+using Microsoft.ApplicationInsights.Extensibility;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-#if (UseAspire)
-builder.AddServiceDefaults();
-#endif
 builder.AddKeyVaultIfConfigured();
 builder.AddApplicationServices();
 builder.AddInfrastructureServices();
 builder.AddWebServices();
+
+// Add Application Insights
+builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddApplicationInsightsTelemetryProcessor<CustomTelemetryProcessor>();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationService>();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["Redis:Configuration"];
+});
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    await app.InitialiseDatabaseAsync();
+    // Temporarily disabled database initialization due to migration conflicts
+    // await app.InitialiseDatabaseAsync();
+    app.UseDeveloperExceptionPage();
 }
 else
 {
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-#if (!UseAspire)
 app.UseHealthChecks("/health");
-#endif
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
@@ -36,22 +55,15 @@ app.UseSwaggerUi(settings =>
     settings.DocumentPath = "/api/specification.json";
 });
 
-#if (!UseApiOnly)
 app.MapRazorPages();
-
+app.MapControllers();
 app.MapFallbackToFile("index.html");
-#endif
 
 app.UseExceptionHandler(options => { });
-
-#if (UseApiOnly)
-app.Map("/", () => Results.Redirect("/api"));
-#endif
-
-#if (UseAspire)
-app.MapDefaultEndpoints();
-#endif
 app.MapEndpoints();
+app.MapHub<CleanArchitecture.Web.Services.InventoryHub>("/hubs/inventory");
+app.MapHub<CleanArchitecture.Web.Services.OrderHub>("/hubs/orders");
+app.UseCors();
 
 app.Run();
 
